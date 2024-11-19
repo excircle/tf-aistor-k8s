@@ -1,2 +1,3 @@
-# tf-aistor-k8s
-A repository dedicated to implementing AiStor on Kubernetes
+# Terraform for MinIO AiStor
+
+This repository is dedicated to implementing MinIO's AiStor on Kubernetes
