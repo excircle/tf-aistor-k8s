@@ -60,8 +60,12 @@ jobs:
         working-directory: ./terraform
         run: terraform init
 
-      - name: Export SSH Key
-        run: echo "TF_VAR_sshkey=${{ secrets.SSHKEY }}" >> $GITHUB_ENV
+      - name: Decode and Export SSH Key
+        run: |
+          echo "${{ secrets.SSHKEY }}" | base64 --decode > sshkey.pem
+          chmod 600 sshkey.pem
+          echo "TF_VAR_sshkey=$(cat sshkey.pem)" >> $GITHUB_ENV
+          rm -f sshkey.pem
 
       # 2.) STATE_EXISTS is false, so we need to create a new Terraform State File & save it as a GitHub Secret
       - name: Apply New Terraform
