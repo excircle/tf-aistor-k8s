@@ -67,7 +67,7 @@ jobs:
       - name: Apply New Terraform
         if: ${{ env.STATE_EXISTS == 'false' }}
         working-directory: ./terraform
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var="$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
 
       - name: Read State File into Env Var
         if: ${{ env.STATE_EXISTS == 'false' }}
