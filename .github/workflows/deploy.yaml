@@ -36,7 +36,7 @@ jobs:
             echo "TF_STATE_FILE is set"
             echo "STATE_EXISTS=true" >> $GITHUB_ENV
           fi
-      # 1.) Set up AWS credentials & Terraform!
+      # 1.) Set up AWS credentials & Terraform
       - name: Configure AWS credentials
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
