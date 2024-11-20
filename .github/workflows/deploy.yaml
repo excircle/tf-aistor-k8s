@@ -71,27 +71,8 @@ jobs:
 
       # 2.) STATE_EXISTS is false, so we need to create a new Terraform State File & save it as a GitHub Secret
       - name: Apply New Terraform
-        if: ${{ env.STATE_EXISTS == 'false' }}
         working-directory: ./terraform
         run: terraform apply -auto-approve -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
-
-      - name: Read State File into Env Var
-        if: ${{ env.STATE_EXISTS == 'false' }}
-        id: read_tf_file
-        run: |
-          {
-            echo 'tf_content<<EOF'
-            cat terraform/terraform.tfstate
-            echo EOF
-          } >> "$GITHUB_ENV"
-
-      - name: Save State File As Secret
-        if: ${{ env.STATE_EXISTS == 'false' }}
-        uses: gliech/create-github-secret-action@v1
-        with:
-          name: TF_STATE_FILE
-          value: ${{ env.tf_content }}
-          pa_token: ${{ secrets.PA_TOKEN }}
 
   destroy:
     needs: set-condition
