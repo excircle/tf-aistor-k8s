@@ -119,7 +119,7 @@ jobs:
         if: ${{ env.STATE_EXISTS == 'true' }}
         uses: actions/checkout@v2
         with:
-          ref: ubuntu #<- Define the branch you wish to use.
+          ref: main #<- Define the branch you wish to use.
       
       - name: Write TF_STATE_FILE to file
         if: ${{ env.STATE_EXISTS == 'true' }}
