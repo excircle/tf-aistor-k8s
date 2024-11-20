@@ -80,6 +80,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_DEFAULT_REGION: "us-west-2"
+      TF_S3_BUCKET: "minio-terraform-state112024"
+      TF_S3_KEY: "terraform.tfstate"
     steps:
       - name: Configure AWS credentials
         env:
