@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  destroy: true
+  destroy: false
 
 jobs:
   set-condition:
