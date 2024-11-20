@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  destroy: false
+  destroy: true
 
 jobs:
   set-condition:
@@ -91,39 +91,22 @@ jobs:
           aws configure set region $AWS_DEFAULT_REGION
           
       - name: Checkout code
-        if: ${{ env.STATE_EXISTS == 'true' }}
         uses: actions/checkout@v2
         with:
           ref: main #<- Define the branch you wish to use.
-      
-      - name: Write TF_STATE_FILE to file
-        if: ${{ env.STATE_EXISTS == 'true' }}
-        run: |
-         sudo tee terraform/terraform.tfstate > /dev/null << 'EOF'
-          ${{ secrets.TF_STATE_FILE }}
-         EOF
 
       - name: Set up Terraform
-        if: ${{ env.STATE_EXISTS == 'true' }}
         uses: hashicorp/setup-terraform@v1
         with:
           terraform_version: 1.1.7
 
       - name: Initialize Terraform
-        if: ${{ env.STATE_EXISTS == 'true' }}
         working-directory: ./terraform
-        run: terraform init
+        run: terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"
 
       - name: Export SSH Key
-        if: ${{ env.STATE_EXISTS == 'true' }}
         run: echo "TF_VAR_sshkey=${{ secrets.SSHKEY }}" >> $GITHUB_ENV
 
       - name: Apply New Terraform
-        if: ${{ env.STATE_EXISTS == 'true' }}
         working-directory: ./terraform
         run: terraform destroy -auto-approve -lock=false
-
-      - name: TF State Count
-        if: ${{ env.STATE_EXISTS == 'true' }}
-        working-directory: ./terraform
-        run: terraform state list | wc -l
