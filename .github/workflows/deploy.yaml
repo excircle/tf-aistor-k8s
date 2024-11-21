@@ -107,6 +107,7 @@ jobs:
           run: |
             head ~/sre-key
             tail ~/sre-key
+            ssh-keygen -l -f ~/sre-key
 
         - name: Setup SSH
           uses: webfactory/ssh-agent@v0.7.0
