@@ -78,7 +78,10 @@ jobs:
       runs-on: ubuntu-latest
       env:
         AWS_DEFAULT_REGION: "us-west-2"
-        INI_FILE: "/tmp/project.ini"
+        INI_FILE: "/home/runner/project.ini"
+        KEY_FILE: "/home/runner/sre-key"
+        NODES_FILE: "/home/runner/nodes.json"
+        ANSIBLE_USER: "ubuntu"
       steps:
         - name: Configure AWS credentials
           env:
@@ -94,22 +97,20 @@ jobs:
           with:
             ref: main #<- Define the branch you wish to use.
 
-        - name: Update project.ini File
-          working-directory: ./ansible
-          run: bash -x update-ini.sh ubuntu
-
         - name: Decode SSH key
           run: |
-            base64 -d <<< '${{ secrets.PRIVATE_SSHKEY }}' > ~/sre-key
-            chmod 0600 ~/sre-key
+            base64 -d <<< '${{ secrets.PRIVATE_SSHKEY }}' > ${{ env.KEY_FILE }}
+            chmod 0600 ${{ env.KEY_FILE }}
 
-        - name: Reformat SSH key
-          run: ssh-keygen -p -m PEM -f ~/sre-key
+        - name: Validate SSH Key
+          run: ssh-keygen -l -f ${{ env.KEY_FILE }}
 
-        - name: Setup SSH
-          uses: webfactory/ssh-agent@v0.7.0
-          with:
-            ssh-private-key: ~/sre-key
+        - name: Update project.ini File
+          working-directory: ./ansible
+          run: bash -x update-ini.sh ${{ env.ANSIBLE_USER }} ${{ env.KEY_FILE }} ${{ env.INI_FILE }} ${{ env.NODES_FILE }}
+
+        - name: Check project.ini File
+          run: cat ${{ env.INI_FILE }}
 
   destroy:
     needs: set-condition
