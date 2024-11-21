@@ -4,12 +4,5 @@
   become: true
   vars:
     perform_base_install: false
-  tasks:
-    - name: Ensure the CNCF K8s role is available
-      ansible.builtin.git:
-        repo: https://github.com/excircle/ansible-cncf-k8s-role
-        dest: /tmp/ansible-cncf-k8s-role
-
-    - name: Include the role dynamically
-      ansible.builtin.include_role:
-        name: /tmp/ansible-cncf-k8s-role
+  roles:
+    - ansible-cncf-k8s-role
