@@ -1,0 +1,7 @@
+# requirements.yml
+---
+- src: https://github.com/excircle/ansible-cncf-k8s-role
+  scm: git
+  version: main  # Specify branch, tag, or commit
+  name: ansible-cncf-k8s-role
+
