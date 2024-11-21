@@ -121,7 +121,7 @@ jobs:
 
         - name: Clone Ansible Role
           working-directory: ./ansible
-          run: git clone https://github.com/excircle/ansible-cncf-k8s-role roles/
+          run: git clone https://github.com/excircle/ansible-cncf-k8s-role roles/ansible-cncf-k8s-role
 
         - name: Clone Ansible Role
           working-directory: ./ansible
