@@ -100,8 +100,8 @@ jobs:
 
         - name: Decode SSH key
           run: |
-            base64 -d <<< '${{ secrets.SSHKEY }}' > /tmp/sshkey.pem
-            chmod 0600 /tmp/sshkey.pem
+            base64 -d <<< '${{ secrets.SSHKEY }}' > ~/.ssh/sre-key
+            chmod 0600 ~/.ssh/sre-key
 
         - name: Check /tmp Directory
           run: |
@@ -111,14 +111,14 @@ jobs:
 
         - name: Check pem file
           run: |
-            if ! grep -q "PRIVATE KEY" /tmp/sshkey.pem; then
+            if ! grep -q "PRIVATE KEY" ~/.ssh/sre-key; then
               echo "Decoded key is not in a valid private key format" >&2
             fi
 
         - name: Setup SSH
           uses: webfactory/ssh-agent@v0.7.0
           with:
-            ssh-private-key: /tmp/sshkey.pem
+            ssh-private-key: ~/.ssh/sre-key
 
   destroy:
     needs: set-condition
