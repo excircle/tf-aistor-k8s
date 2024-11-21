@@ -18,61 +18,93 @@ jobs:
         id: set-output
         run: |
           echo "RUN_JOB=${{ env.destroy }}" >> $GITHUB_OUTPUT
-  build:
-    needs: set-condition
-    if: needs.set-condition.outputs.run-job == 'false'
-    runs-on: ubuntu-latest
-    env:
-      AWS_DEFAULT_REGION: "us-west-2"
-      TF_S3_BUCKET: "minio-terraform-state112024"
-      TF_S3_KEY: "terraform.tfstate"
-    steps:
-      # 1.) Set up AWS credentials & Terraform
-      - name: Configure AWS credentials
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: |
-          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-          aws configure set region $AWS_DEFAULT_REGION
+  # aws-build:
+  #   needs: set-condition
+  #   if: needs.set-condition.outputs.run-job == 'false'
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     AWS_DEFAULT_REGION: "us-west-2"
+  #     TF_S3_BUCKET: "minio-terraform-state112024"
+  #     TF_S3_KEY: "terraform.tfstate"
+  #   steps:
+  #     - name: Configure AWS credentials
+  #       env:
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #       run: |
+  #         aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+  #         aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+  #         aws configure set region $AWS_DEFAULT_REGION
 
-      - name: Check if S3 Bucket Exists
-        id: check-bucket
-        run: |
-          if aws s3api head-bucket --bucket $TF_S3_BUCKET 2>/dev/null; then
-            echo "bucket_exists=true" >> $GITHUB_ENV
-          else
-            echo "bucket_exists=false" >> $GITHUB_ENV
-          fi
+  #     - name: Check if S3 Bucket Exists
+  #       id: check-bucket
+  #       run: |
+  #         if aws s3api head-bucket --bucket $TF_S3_BUCKET 2>/dev/null; then
+  #           echo "bucket_exists=true" >> $GITHUB_ENV
+  #         else
+  #           echo "bucket_exists=false" >> $GITHUB_ENV
+  #         fi
     
-      - name: Create AWS S3 bucket
-        if: env.bucket_exists == 'false'
-        run: |
-          aws s3api create-bucket --bucket $TF_S3_BUCKET --region $AWS_DEFAULT_REGION --create-bucket-configuration LocationConstraint=$AWS_DEFAULT_REGION
-          aws s3api put-object --bucket $TF_S3_BUCKET --key $TF_S3_KEY
+  #     - name: Create AWS S3 bucket
+  #       if: env.bucket_exists == 'false'
+  #       run: |
+  #         aws s3api create-bucket --bucket $TF_S3_BUCKET --region $AWS_DEFAULT_REGION --create-bucket-configuration LocationConstraint=$AWS_DEFAULT_REGION
+  #         aws s3api put-object --bucket $TF_S3_BUCKET --key $TF_S3_KEY
 
-      - name: Checkout code
-        uses: actions/checkout@v2
-        with:
-          ref: main #<- Define the branch you wish to use.
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: main #<- Define the branch you wish to use.
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v1
-        with:
-          terraform_version: 1.1.7
+  #     - name: Set up Terraform
+  #       uses: hashicorp/setup-terraform@v1
+  #       with:
+  #         terraform_version: 1.1.7
 
-      - name: Initialize Terraform
-        working-directory: ./terraform
-        run: terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"
+  #     - name: Initialize Terraform
+  #       working-directory: ./terraform
+  #       run: terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"
 
-      - name: Decode and Export SSH Key
-        run: echo 'TF_VAR_sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)' >> $GITHUB_ENV
+  #     - name: Decode and Export SSH Key
+  #       run: echo 'TF_VAR_sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)' >> $GITHUB_ENV
 
-      # 2.) STATE_EXISTS is false, so we need to create a new Terraform State File & save it as a GitHub Secret
-      - name: Apply New Terraform
-        working-directory: ./terraform
-        run: terraform apply -auto-approve -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
+  #     - name: Apply New Terraform
+  #       working-directory: ./terraform
+  #       run: terraform apply -auto-approve -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
+
+  ansible-build:
+      needs: set-condition
+      if: needs.set-condition.outputs.run-job == 'false'
+      runs-on: ubuntu-latest
+      env:
+        AWS_DEFAULT_REGION: "us-west-2"
+        INI_FILE: "/tmp/project.ini"
+      steps:
+        - name: Configure AWS credentials
+          env:
+            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          run: |
+            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+            aws configure set region $AWS_DEFAULT_REGION
+        
+        - name: Checkout code
+          uses: actions/checkout@v4
+          with:
+            ref: main #<- Define the branch you wish to use.
+
+        - name: Update project.ini File
+          working-directory: ./ansible
+          run: bash -x update-ini.sh
+
+        - name: Check /tmp Directory
+          run: ls -lah /tmp
+
+        - name: Setup SSH
+          uses: webfactory/ssh-agent@v0.7.0
+          with:
+            ssh-private-key: $(echo "${{ secrets.SSHKEY }}" | base64 --decode)
 
   destroy:
     needs: set-condition
@@ -93,7 +125,7 @@ jobs:
           aws configure set region $AWS_DEFAULT_REGION
           
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           ref: main #<- Define the branch you wish to use.
 
