@@ -120,7 +120,7 @@ jobs:
             echo "EOF" >> $GITHUB_ENV
 
         - name: Clone Ansible Role
-          working_directory: ./ansible
+          working-directory: ./ansible
           run: git clone https://github.com/excircle/ansible-cncf-k8s-role roles/
 
         - name: Run Ansible Playbook
