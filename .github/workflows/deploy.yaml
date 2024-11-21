@@ -112,6 +112,21 @@ jobs:
         - name: Check project.ini File
           run: cat ${{ env.INI_FILE }}
 
+        - name: Read Inventory File
+          id: read-inventory
+          run: |
+            echo "inventory_content<<EOF" >> $GITHUB_ENV
+            cat ${{ env.INI_FILE }} >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+
+        - name: Run Ansible Playbook
+          uses: dawidd6/action-ansible-playbook@v2
+          with:
+            playbook: k8s-bootstrap.yaml
+            directory: ./ansible
+            requirements: requirements.yaml
+            inventory: ${{ env.inventory_content }}
+
   destroy:
     needs: set-condition
     if: needs.set-condition.outputs.run-job == 'true'
