@@ -123,12 +123,16 @@ jobs:
           working-directory: ./ansible
           run: git clone https://github.com/excircle/ansible-cncf-k8s-role roles/
 
-        - name: Run Ansible Playbook
-          uses: dawidd6/action-ansible-playbook@v2
-          with:
-            playbook: k8s-bootstrap.yaml
-            directory: ./ansible
-            inventory: ${{ env.inventory_content }}
+        - name: Clone Ansible Role
+          working-directory: ./ansible
+          run: tree
+
+        # - name: Run Ansible Playbook
+        #   uses: dawidd6/action-ansible-playbook@v2
+        #   with:
+        #     playbook: k8s-bootstrap.yaml
+        #     directory: ./ansible
+        #     inventory: ${{ env.inventory_content }}
 
   destroy:
     needs: set-condition
