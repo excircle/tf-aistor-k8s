@@ -101,10 +101,16 @@ jobs:
         - name: Check /tmp Directory
           run: ls -lah /tmp
 
+        - name: Decode SSH key
+          run: |
+            touch /tmp/sshkey.pem
+            echo "${{ secrets.SSHKEY }}" | base64 --decode > /tmp/sshkey.pem
+            chmod 0600 /tmp/sshkey.pem
+
         - name: Setup SSH
           uses: webfactory/ssh-agent@v0.7.0
           with:
-            ssh-private-key: $(echo "${{ secrets.SSHKEY }}" | base64 --decode)
+            ssh-private-key: /tmp/sshkey.pem
 
   destroy:
     needs: set-condition

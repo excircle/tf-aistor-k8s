@@ -1,5 +1,7 @@
 USER=$1
 
+touch /tmp/nodes.json
+
 aws ec2 describe-instances \
     --region us-west-2 \
     --filters "Name=tag:Name,Values=k8s-node*" "Name=instance-state-name,Values=running" \
