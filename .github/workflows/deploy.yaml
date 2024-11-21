@@ -103,6 +103,11 @@ jobs:
             base64 -d <<< '${{ secrets.PRIVATE_SSHKEY }}' > ~/sre-key
             chmod 0600 ~/sre-key
 
+        - name: Check /tmp Directory
+          run: |
+            head ~/sre-key
+            tail ~/sre-key
+
         - name: Setup SSH
           uses: webfactory/ssh-agent@v0.7.0
           with:
