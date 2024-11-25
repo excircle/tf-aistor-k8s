@@ -70,9 +70,13 @@ jobs:
         working-directory: ./terraform/k8s-cluster
         run: export TF_PLUGIN_CACHE_DIR=${{ env.TF_PLUGIN_CACHE_DIR }}; terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"
 
-      - name: Set K8S-Cluster Terraform Workspace
+      - name: Determine K8S-Cluster Terraform Workspace
         working-directory: ./terraform/k8s-cluster
-        run: terraform workspace new ${{ env.TF_K8S_WORKSPACE }}
+        run: |
+          if terraform workspace select ${{ env.TF_K8S_WORKSPACE }} 2>/dev/null; then
+            echo "Workspace ${{ env.TF_K8S_WORKSPACE }} Selected!"
+          else
+            terraform workspace new ${{ env.TF_K8S_WORKSPACE }}
 
       - name: Apply New Terraform
         working-directory: ./terraform/k8s-cluster
@@ -170,9 +174,13 @@ jobs:
         working-directory: ./terraform/k8s-cluster
         run: export TF_PLUGIN_CACHE_DIR=${{ env.TF_PLUGIN_CACHE_DIR }}; terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"
 
-      - name: Switch Terraform Workspace
+      - name: Determine K8S-Cluster Terraform Workspace
         working-directory: ./terraform/k8s-cluster
-        run: terraform workspace select ${{ env.TF_K8S_WORKSPACE }}
+        run: |
+          if terraform workspace select ${{ env.TF_K8S_WORKSPACE }} 2>/dev/null; then
+            echo "Workspace ${{ env.TF_K8S_WORKSPACE }} Selected!"
+          else
+            terraform workspace new ${{ env.TF_K8S_WORKSPACE }}
 
       - name: Apply New Terraform
         working-directory: ./terraform/k8s-cluster
