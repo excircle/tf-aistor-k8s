@@ -55,7 +55,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: main #<- Define the branch you wish to use.
+          ref: main #<- Define the branch you wish to use!
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
