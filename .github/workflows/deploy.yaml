@@ -151,7 +151,7 @@ jobs:
             path: /tmp/config
 
   aistor-deploy:
-    needs: [set-condition, aws-build]
+    needs: [set-condition, ansible-build]
     if: needs.set-condition.outputs.run-job == 'false'
     runs-on: ubuntu-latest
     env:
