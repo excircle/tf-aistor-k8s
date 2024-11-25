@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  destroy: false
+  destroy: true
 
 jobs:
   set-condition:
@@ -93,6 +93,7 @@ jobs:
         KEY_FILE: "/home/runner/sre-key"
         NODES_FILE: "/home/runner/nodes.json"
         ANSIBLE_USER: "ubuntu"
+        K8S_CONF_FILE: "/tmp/config"
       steps:
         - name: Configure AWS credentials
           env:
@@ -140,6 +141,31 @@ jobs:
             playbook: k8s-bootstrap.yaml
             directory: ./ansible
             inventory: ${{ env.inventory_content }}
+            options: |
+              --extra-vars="local_kube_config=/tmp/config"
+
+        - name: Upload K8S Config File
+          uses: actions/upload-artifact@v3
+          with:
+            name: config
+            path: /tmp/config
+
+  aistor-deploy:
+    needs: [set-condition, aws-build]
+    if: needs.set-condition.outputs.run-job == 'false'
+    runs-on: ubuntu-latest
+    env:
+      AWS_DEFAULT_REGION: "us-west-2"
+    steps:
+      - name: Configure AWS credentials
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          aws configure set region $AWS_DEFAULT_REGION
+      - name: 
 
   destroy:
     needs: set-condition
