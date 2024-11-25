@@ -77,6 +77,7 @@ jobs:
             echo "Workspace ${{ env.TF_K8S_WORKSPACE }} Selected!"
           else
             terraform workspace new ${{ env.TF_K8S_WORKSPACE }}
+          fi
 
       - name: Apply New Terraform
         working-directory: ./terraform/k8s-cluster
@@ -181,6 +182,7 @@ jobs:
             echo "Workspace ${{ env.TF_K8S_WORKSPACE }} Selected!"
           else
             terraform workspace new ${{ env.TF_K8S_WORKSPACE }}
+          fi
 
       - name: Apply New Terraform
         working-directory: ./terraform/k8s-cluster
