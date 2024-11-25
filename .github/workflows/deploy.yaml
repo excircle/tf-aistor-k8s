@@ -165,7 +165,7 @@ jobs:
 
       - name: Initialize Terraform
         working-directory: ./terraform/k8s-cluster
-        run: export TF_PLUGIN_CACHE_DIR=${{ env.TF_PLUGIN_CACHE_DIR }}; terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"
+        run: export TF_PLUGIN_CACHE_DIR=${{ env.TF_PLUGIN_CACHE_DIR }}; terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"
 
       - name: Export SSH Key
         run: echo "TF_VAR_sshkey=${{ secrets.SSHKEY }}" >> $GITHUB_ENV
