@@ -27,6 +27,7 @@ jobs:
       TF_S3_BUCKET: "minio-terraform-state112024"
       TF_S3_KEY: "terraform.tfstate"
       TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/terraform/.plugin-cache
+      TF_K8S_WORKSPACE: k8s
     steps:
       - name: Configure AWS credentials
         env:
@@ -71,7 +72,7 @@ jobs:
 
       - name: Set K8S-Cluster Terraform Workspace
         working-directory: ./terraform/k8s-cluster
-        run: terraform workspace new k8s
+        run: terraform workspace new ${{ env.TF_K8S_WORKSPACE }}
 
       - name: Apply New Terraform
         working-directory: ./terraform/k8s-cluster
@@ -143,6 +144,8 @@ jobs:
       AWS_DEFAULT_REGION: "us-west-2"
       TF_S3_BUCKET: "minio-terraform-state112024"
       TF_S3_KEY: "terraform.tfstate"
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/terraform/.plugin-cache
+      TF_K8S_WORKSPACE: k8s
     steps:
       - name: Configure AWS credentials
         env:
@@ -167,8 +170,9 @@ jobs:
         working-directory: ./terraform/k8s-cluster
         run: export TF_PLUGIN_CACHE_DIR=${{ env.TF_PLUGIN_CACHE_DIR }}; terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"
 
-      - name: Export SSH Key
-        run: echo "TF_VAR_sshkey=${{ secrets.SSHKEY }}" >> $GITHUB_ENV
+      - name: Switch Terraform Workspace
+        working-directory: ./terraform/k8s-cluster
+        run: terraform workspace select ${{ env.TF_K8S_WORKSPACE }}
 
       - name: Apply New Terraform
         working-directory: ./terraform/k8s-cluster
