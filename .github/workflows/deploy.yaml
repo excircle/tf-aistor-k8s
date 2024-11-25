@@ -176,4 +176,4 @@ jobs:
 
       - name: Apply New Terraform
         working-directory: ./terraform/k8s-cluster
-        run: terraform destroy -auto-approve -lock=false
+        run: terraform destroy -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)" -auto-approve -lock=false
