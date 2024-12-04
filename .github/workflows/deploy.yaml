@@ -7,6 +7,8 @@ on:
 
 env:
   destroy: true
+  branch: main
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/terraform/.plugin-cache
 
 jobs:
   set-condition:
@@ -26,7 +28,6 @@ jobs:
       AWS_DEFAULT_REGION: "us-west-2"
       TF_S3_BUCKET: "minio-terraform-state112024"
       TF_S3_KEY: "terraform.tfstate"
-      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/terraform/.plugin-cache
       TF_K8S_WORKSPACE: k8s
     steps:
       - name: Configure AWS credentials
@@ -56,7 +57,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: main #<- Define the branch you wish to use
+          ref: ${{ env.branch }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
@@ -107,7 +108,7 @@ jobs:
         - name: Checkout code
           uses: actions/checkout@v4
           with:
-            ref: main #<- Define the branch you wish to use.
+            ref: ${{ env.branch }}
 
         - name: Decode SSH key
           run: |
@@ -145,7 +146,7 @@ jobs:
               --extra-vars="local_kube_config=/tmp/config"
 
         - name: Upload K8S Config File
-          uses: actions/upload-artifact@v3
+          uses: actions/upload-artifact@v4
           with:
             name: config
             path: /tmp/config
@@ -156,6 +157,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_DEFAULT_REGION: "us-west-2"
+      TF_K8S_WORKSPACE: k8s
+      TF_S3_BUCKET: "minio-terraform-state112024"
+      TF_S3_KEY: "terraform.tfstate"
     steps:
       - name: Configure AWS credentials
         env:
@@ -165,6 +169,75 @@ jobs:
           aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
           aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
           aws configure set region $AWS_DEFAULT_REGION
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.branch }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      - name: Retrieve K8S Config File
+        uses: actions/download-artifact@v4
+        with:
+          name: config
+          path: ./terraform/aistor-config/
+
+      - name: Create Plugin Cache Dir
+        run: mkdir ${{ env.TF_PLUGIN_CACHE_DIR }}
+
+      - name: Initialize K8S-Cluster Terraform
+        working-directory: ./terraform/aistor-config
+        run: export TF_PLUGIN_CACHE_DIR=${{ env.TF_PLUGIN_CACHE_DIR }}; terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"
+
+      - name: Determine K8S-Cluster Terraform Workspace
+        working-directory: ./terraform/aistor-config
+        run: |
+          if terraform workspace select ${{ env.TF_K8S_WORKSPACE }} 2>/dev/null; then
+            echo "Workspace ${{ env.TF_K8S_WORKSPACE }} Selected!"
+          else
+            terraform workspace new ${{ env.TF_K8S_WORKSPACE }}
+          fi
+
+      - name: Update /etc/hosts File With K8SCP Address Using AWS CLI
+        run: |
+          aws ec2 describe-instances --region us-west-2 \ 
+          --filters "Name=tag:Name,Values=k8s-node-1" "Name=instance-state-name,Values=running" \
+          --query "Reservations[*].Instances[*].{Name:Tags[?Key=='Name']|[0].Value, PublicIpAddress:PublicIpAddress}" \
+          --output json | jq -r '[.[][]][].PublicIpAddress' | xargs -I {} echo "{} k8scp" | sudo tee -a /etc/hosts
+
+      - name: Record ebs_storage_volume_size From k8s-cluster/main.tf
+        working-directory: ./terraform
+        run: echo "disk_size=$(grep ebs_storage_volume k8s-cluster/main.tf | aws {'print $NF'})" >> $GITHUB_ENV
+
+      - name: Record host_count From k8s-cluster/main.tf
+        working-directory: ./terraform
+        run: echo "host_count=$(grep "hosts" k8s-cluster/main.tf | grep -o "[0-999]")" >> $GITHUB_ENV
+
+      - name: Record disk_count From k8s-cluster/main.tf
+        working-directory: ./terraform
+        run: echo "disk_count=$(grep num_disks k8s-cluster/main.tf | grep -o "[0-999]")" >> $GITHUB_ENV
+
+      - name: Record application_name From k8s-cluster/main.tf
+        working-directory: ./terraform
+        run: echo "application_name=$(grep -A 100 node k8s-cluster/main.tf | grep application_name | awk {'print $NF'} | sed 's|"||g')" >> $GITHUB_ENV
+
+      - name: Create array string containing k8s hostnames
+        run: |
+          S+="["
+          for i in {1..${{ env.host_count }}}; do
+            S+='"'
+            S+="${{ env.application_name }}-$i"
+            S+='",'
+          done;
+          echo $S | sed "s|,]|]|g" | xargs -I {} echo "host_array={}" >> $GITHUB_ENV
+
+      - name: Apply New Terraform
+        working-directory: ./terraform/aistor-config
+        run: terraform apply -var="aistor_pv_size=${{ env.disk_size }}" -var="hostnames=${{ env.host_array }}" -var="disk_count=${{ env.disk_count }}" -auto-approve
 
   destroy:
     needs: set-condition
@@ -189,7 +262,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: main #<- Define the branch you wish to use.
+          ref: ${{ env.branch }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2

@@ -1,0 +1,10 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ${storage_class_name}
+  annotations:
+    storageclass.kubernetes.io/is-default-class: ${is_default_storage_class}
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: ${sto_class_volume_binding_mode}
+reclaimPolicy: ${sto_class_reclaim_policy}

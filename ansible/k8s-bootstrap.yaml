@@ -4,5 +4,6 @@
   become: true
   vars:
     perform_base_install: false
+    local_kube_config: /tmp/config
   roles:
     - ansible-cncf-k8s-role
