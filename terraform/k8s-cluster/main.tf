@@ -15,10 +15,10 @@ module "k8s-node" {
 
   application_name          = "k8s-node"
   system_user               = "ubuntu"
-  hosts                     = 0                              # Number of nodes with MinIO installed
+  hosts                     = 4                              # Number of nodes with MinIO installed
   vpc_id                    = module.k8s-vpc.vpc_id
   ebs_root_volume_size      = 10
-  ebs_storage_volume_size   = 10
+  ebs_storage_volume_size   = 40
   make_private              = false
   ec2_instance_type         = "t2.medium"
   ec2_ami_image             = "ami-07a7eda24f3bc8430"        # ami-03c983f9003cb9cd1 | us-west-2 AMI | Ubuntu 22.04.4 LTS (Jammy Jellyfish)
