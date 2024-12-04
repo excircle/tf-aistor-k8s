@@ -247,7 +247,7 @@ jobs:
           hostnames: '${{ env.hostnames }}'
 
       - name: Provision AiStor using Kustomize & kubectl
-        run: kubectl kustomize ${{ env.AISTOR_GIT_LOCATION }} | kubectl apply -f -
+        run: kubectl --kubeconfig="${{ github.workspace }}/terraform/aistor-config/config" kustomize ${{ env.AISTOR_GIT_LOCATION }} | kubectl apply -f -
 
   destroy:
     needs: set-condition
