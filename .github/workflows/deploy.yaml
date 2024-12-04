@@ -231,9 +231,9 @@ jobs:
         working-directory: ./terraform/aistor-config
         run: echo "disk_size=$(jq -r '.size' disk-info.json)" >> $GITHUB_ENV
 
-      - name: Record host_count from disk-info.json
+      - name: Record hostnames from disk-info.json
         working-directory: ./terraform/aistor-config
-        run: echo "hostnames=$(jq -r '.hostnames' disk-info.json)" >> $GITHUB_ENV
+        run: echo "hostnames=$(jq -c '.hostnames' disk-info.json)" >> $GITHUB_ENV
 
       - name: Record disk_count from disk-info.json
         working-directory: ./terraform/aistor-config
