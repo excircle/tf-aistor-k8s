@@ -84,171 +84,171 @@ jobs:
         working-directory: ./terraform/k8s-cluster
         run: terraform apply -auto-approve -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
 
-      - name: Upload disk-info.json File
-        uses: actions/upload-artifact@v4
-        with:
-          name: disk-info.json
-          path: ./terraform/k8s-cluster/disk-info.json
+  #     - name: Upload disk-info.json File
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: disk-info.json
+  #         path: ./terraform/k8s-cluster/disk-info.json
 
-  ansible-build:
-      needs: [set-condition, aws-build]
-      if: needs.set-condition.outputs.run-job == 'false'
-      runs-on: ubuntu-latest
-      env:
-        AWS_DEFAULT_REGION: "us-west-2"
-        INI_FILE: "/home/runner/project.ini"
-        KEY_FILE: "/home/runner/sre-key"
-        NODES_FILE: "/home/runner/nodes.json"
-        ANSIBLE_USER: "ubuntu"
-        K8S_CONF_FILE: "/tmp/config"
-      steps:
-        - name: Configure AWS credentials
-          env:
-            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          run: |
-            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-            aws configure set region $AWS_DEFAULT_REGION
+  # ansible-build:
+  #     needs: [set-condition, aws-build]
+  #     if: needs.set-condition.outputs.run-job == 'false'
+  #     runs-on: ubuntu-latest
+  #     env:
+  #       AWS_DEFAULT_REGION: "us-west-2"
+  #       INI_FILE: "/home/runner/project.ini"
+  #       KEY_FILE: "/home/runner/sre-key"
+  #       NODES_FILE: "/home/runner/nodes.json"
+  #       ANSIBLE_USER: "ubuntu"
+  #       K8S_CONF_FILE: "/tmp/config"
+  #     steps:
+  #       - name: Configure AWS credentials
+  #         env:
+  #           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         run: |
+  #           aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+  #           aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+  #           aws configure set region $AWS_DEFAULT_REGION
         
-        - name: Checkout code
-          uses: actions/checkout@v4
-          with:
-            ref: main #<- Define the branch you wish to use.
+  #       - name: Checkout code
+  #         uses: actions/checkout@v4
+  #         with:
+  #           ref: main #<- Define the branch you wish to use.
 
-        - name: Decode SSH key
-          run: |
-            base64 -d <<< '${{ secrets.PRIVATE_SSHKEY }}' > ${{ env.KEY_FILE }}
-            chmod 0600 ${{ env.KEY_FILE }}
+  #       - name: Decode SSH key
+  #         run: |
+  #           base64 -d <<< '${{ secrets.PRIVATE_SSHKEY }}' > ${{ env.KEY_FILE }}
+  #           chmod 0600 ${{ env.KEY_FILE }}
 
-        - name: Validate SSH Key
-          run: ssh-keygen -l -f ${{ env.KEY_FILE }}
+  #       - name: Validate SSH Key
+  #         run: ssh-keygen -l -f ${{ env.KEY_FILE }}
 
-        - name: Update project.ini File
-          working-directory: ./ansible
-          run: bash -x update-ini.sh ${{ env.ANSIBLE_USER }} ${{ env.KEY_FILE }} ${{ env.INI_FILE }} ${{ env.NODES_FILE }}
+  #       - name: Update project.ini File
+  #         working-directory: ./ansible
+  #         run: bash -x update-ini.sh ${{ env.ANSIBLE_USER }} ${{ env.KEY_FILE }} ${{ env.INI_FILE }} ${{ env.NODES_FILE }}
 
-        - name: Check project.ini File
-          run: cat ${{ env.INI_FILE }}
+  #       - name: Check project.ini File
+  #         run: cat ${{ env.INI_FILE }}
 
-        - name: Read Inventory File
-          id: read-inventory
-          run: |
-            echo "inventory_content<<EOF" >> $GITHUB_ENV
-            cat ${{ env.INI_FILE }} >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
+  #       - name: Read Inventory File
+  #         id: read-inventory
+  #         run: |
+  #           echo "inventory_content<<EOF" >> $GITHUB_ENV
+  #           cat ${{ env.INI_FILE }} >> $GITHUB_ENV
+  #           echo "EOF" >> $GITHUB_ENV
 
-        - name: Clone Ansible Role
-          working-directory: ./ansible
-          run: git clone https://github.com/excircle/ansible-cncf-k8s-role roles/ansible-cncf-k8s-role
+  #       - name: Clone Ansible Role
+  #         working-directory: ./ansible
+  #         run: git clone https://github.com/excircle/ansible-cncf-k8s-role roles/ansible-cncf-k8s-role
 
-        - name: Run Ansible Playbook
-          uses: dawidd6/action-ansible-playbook@v2
-          with:
-            playbook: k8s-bootstrap.yaml
-            directory: ./ansible
-            inventory: ${{ env.inventory_content }}
-            options: |
-              --extra-vars="local_kube_config=/tmp/config"
+  #       - name: Run Ansible Playbook
+  #         uses: dawidd6/action-ansible-playbook@v2
+  #         with:
+  #           playbook: k8s-bootstrap.yaml
+  #           directory: ./ansible
+  #           inventory: ${{ env.inventory_content }}
+  #           options: |
+  #             --extra-vars="local_kube_config=/tmp/config"
 
-        - name: Upload K8S Config File
-          uses: actions/upload-artifact@v4
-          with:
-            name: config
-            path: /tmp/config
+  #       - name: Upload K8S Config File
+  #         uses: actions/upload-artifact@v4
+  #         with:
+  #           name: config
+  #           path: /tmp/config
 
-  aistor-deploy:
-    needs: [set-condition, ansible-build]
-    if: needs.set-condition.outputs.run-job == 'false'
-    runs-on: ubuntu-latest
-    env:
-      AWS_DEFAULT_REGION: "us-west-2"
-      TF_WORKSPACE_VAR: aistor
-      TF_S3_BUCKET: "minio-terraform-state112024"
-      TF_S3_KEY: "terraform.tfstate"
-      AISTOR_GIT_LOCATION: "https://github.com/minio/aistor.git"
-    steps:
-      - name: Configure AWS credentials
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: |
-          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-          aws configure set region $AWS_DEFAULT_REGION
+  # aistor-deploy:
+  #   needs: [set-condition, ansible-build]
+  #   if: needs.set-condition.outputs.run-job == 'false'
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     AWS_DEFAULT_REGION: "us-west-2"
+  #     TF_WORKSPACE_VAR: aistor
+  #     TF_S3_BUCKET: "minio-terraform-state112024"
+  #     TF_S3_KEY: "terraform.tfstate"
+  #     AISTOR_GIT_LOCATION: "https://github.com/minio/aistor.git"
+  #   steps:
+  #     - name: Configure AWS credentials
+  #       env:
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #       run: |
+  #         aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+  #         aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+  #         aws configure set region $AWS_DEFAULT_REGION
 
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.branch }}
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ env.branch }}
 
-      - name: List artifacts
-        run: |
-          curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts
+  #     - name: List artifacts
+  #       run: |
+  #         curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+  #         https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts
 
-      - name: Retrieve K8S Config File
-        uses: actions/download-artifact@v4
-        with:
-          name: config
-          path: ./terraform/aistor-config/
+  #     - name: Retrieve K8S Config File
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: config
+  #         path: ./terraform/aistor-config/
 
-      - name: Retrieve disk-info.json File
-        uses: actions/download-artifact@v4
-        with:
-          name: disk-info.json
-          path: ./terraform/aistor-config/
+  #     - name: Retrieve disk-info.json File
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: disk-info.json
+  #         path: ./terraform/aistor-config/
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.7
+  #     - name: Set up Terraform
+  #       uses: hashicorp/setup-terraform@v2
+  #       with:
+  #         terraform_version: 1.5.7
 
-      - name: Create Plugin Cache Dir
-        run: mkdir ${{ env.TF_PLUGIN_CACHE_DIR }}
+  #     - name: Create Plugin Cache Dir
+  #       run: mkdir ${{ env.TF_PLUGIN_CACHE_DIR }}
 
-      - name: Initialize K8S-Cluster Terraform
-        working-directory: ./terraform/aistor-config
-        run: export TF_PLUGIN_CACHE_DIR=${{ env.TF_PLUGIN_CACHE_DIR }}; terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"
+  #     - name: Initialize K8S-Cluster Terraform
+  #       working-directory: ./terraform/aistor-config
+  #       run: export TF_PLUGIN_CACHE_DIR=${{ env.TF_PLUGIN_CACHE_DIR }}; terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"
 
-      - name: Determine K8S-Cluster Terraform Workspace
-        working-directory: ./terraform/aistor-config
-        run: |
-          if terraform workspace select ${{ env.TF_WORKSPACE_VAR }} 2>/dev/null; then
-            echo "Workspace ${{ env.TF_WORKSPACE_VAR }} Selected!"
-          else
-            terraform workspace new ${{ env.TF_WORKSPACE_VAR }}
-          fi
+  #     - name: Determine K8S-Cluster Terraform Workspace
+  #       working-directory: ./terraform/aistor-config
+  #       run: |
+  #         if terraform workspace select ${{ env.TF_WORKSPACE_VAR }} 2>/dev/null; then
+  #           echo "Workspace ${{ env.TF_WORKSPACE_VAR }} Selected!"
+  #         else
+  #           terraform workspace new ${{ env.TF_WORKSPACE_VAR }}
+  #         fi
 
-      - name: Update /etc/hosts File With K8SCP Address Using AWS CLI
-        run: |
-          aws ec2 describe-instances \
-          --region us-west-2 \
-          --filters "Name=tag:Name,Values=k8s-node-1" "Name=instance-state-name,Values=running" \
-          --query "Reservations[*].Instances[*].{Name:Tags[?Key=='Name']|[0].Value, PublicIpAddress:PublicIpAddress}" \
-          --output json | jq -r '[.[][]][].PublicIpAddress' | xargs -I {} echo "{} k8scp" | sudo tee -a /etc/hosts
+  #     - name: Update /etc/hosts File With K8SCP Address Using AWS CLI
+  #       run: |
+  #         aws ec2 describe-instances \
+  #         --region us-west-2 \
+  #         --filters "Name=tag:Name,Values=k8s-node-1" "Name=instance-state-name,Values=running" \
+  #         --query "Reservations[*].Instances[*].{Name:Tags[?Key=='Name']|[0].Value, PublicIpAddress:PublicIpAddress}" \
+  #         --output json | jq -r '[.[][]][].PublicIpAddress' | xargs -I {} echo "{} k8scp" | sudo tee -a /etc/hosts
 
-      - name: Record ebs_storage_volume_size from disk-info.json
-        working-directory: ./terraform/aistor-config
-        run: echo "disk_size=$(jq -r '.size' disk-info.json)" >> $GITHUB_ENV
+  #     - name: Record ebs_storage_volume_size from disk-info.json
+  #       working-directory: ./terraform/aistor-config
+  #       run: echo "disk_size=$(jq -r '.size' disk-info.json)" >> $GITHUB_ENV
 
-      - name: Record hostnames from disk-info.json
-        working-directory: ./terraform/aistor-config
-        run: echo "hostnames=$(jq -c '.hostnames' disk-info.json)" >> $GITHUB_ENV
+  #     - name: Record hostnames from disk-info.json
+  #       working-directory: ./terraform/aistor-config
+  #       run: echo "hostnames=$(jq -c '.hostnames' disk-info.json)" >> $GITHUB_ENV
 
-      - name: Record disk_count from disk-info.json
-        working-directory: ./terraform/aistor-config
-        run: echo "disk_count=$(jq -r '.disks | length' disk-info.json)" >> $GITHUB_ENV
+  #     - name: Record disk_count from disk-info.json
+  #       working-directory: ./terraform/aistor-config
+  #       run: echo "disk_count=$(jq -r '.disks | length' disk-info.json)" >> $GITHUB_ENV
 
-      - name: Apply PV & PVC Terraform
-        working-directory: ./terraform/aistor-config
-        run: terraform apply -var="aistor_pv_size=${{ env.disk_size }}" -var='hostnames=${{ env.hostnames }}' -var="disk_count=${{ env.disk_count }}" -auto-approve
-        env:
-          hostnames: '${{ env.hostnames }}'
+  #     - name: Apply PV & PVC Terraform
+  #       working-directory: ./terraform/aistor-config
+  #       run: terraform apply -var="aistor_pv_size=${{ env.disk_size }}" -var='hostnames=${{ env.hostnames }}' -var="disk_count=${{ env.disk_count }}" -auto-approve
+  #       env:
+  #         hostnames: '${{ env.hostnames }}'
 
-      - name: Provision AiStor using Kustomize & kubectl
-        working-directory: ./terraform/aistor-config
-        run: kubectl --kubeconfig="./config" kustomize ${{ env.AISTOR_GIT_LOCATION }} | kubectl --kubeconfig="./config" apply -f -
+  #     - name: Provision AiStor using Kustomize & kubectl
+  #       working-directory: ./terraform/aistor-config
+  #       run: kubectl --kubeconfig="./config" kustomize ${{ env.AISTOR_GIT_LOCATION }} | kubectl --kubeconfig="./config" apply -f -
 
   destroy:
     needs: set-condition
