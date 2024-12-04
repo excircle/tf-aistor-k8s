@@ -10,7 +10,7 @@ spec:
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: local-storage
+  storageClassName: ${storage_class_name}
   local:
     path: ${aistor_data_dir}
   nodeAffinity:
