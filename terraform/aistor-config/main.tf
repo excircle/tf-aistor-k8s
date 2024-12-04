@@ -23,7 +23,7 @@ resource "kubernetes_manifest" "default_storage_class" {
 resource "kubernetes_manifest" "persistent_volume" {
   count = var.disk_count
 
-  manifest = yamldecode(templatefile("${path.module}/persistent-volume.yaml", {
+  manifest = yamldecode(templatefile("${path.module}/manifests/persistent-volume.yaml", {
     aistor_pv_name  = format("%s-%d", var.aistor_pv_name, count.index)
     aistor_pv_size  = var.aistor_pv_size
     aistor_data_dir = format("/mnt/data-%d", count.index)
