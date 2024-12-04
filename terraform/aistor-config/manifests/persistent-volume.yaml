@@ -12,7 +12,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: /mnt/${aistor_data_dir}
+    path: ${aistor_data_dir}
   nodeAffinity:
     required:
       nodeSelectorTerms:
