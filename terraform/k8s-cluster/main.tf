@@ -29,4 +29,5 @@ module "k8s-node" {
   ec2_key_name              = "quick-key"
   package_manager           = "apt"
   bastion_host              = false
+  generate_disk_info        = true
 }
