@@ -229,7 +229,7 @@ jobs:
 
       - name: Record ebs_storage_volume_size from disk-info.json
         working-directory: ./terraform/aistor-config
-        run: echo "disk_size=$(jq -r '.disks[]' disk-info.json)" >> $GITHUB_ENV
+        run: echo "disk_size=$(jq -r '.size' disk-info.json)" >> $GITHUB_ENV
 
       - name: Record host_count from disk-info.json
         working-directory: ./terraform/aistor-config
