@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  destroy: true
+  destroy: false
   branch: main
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/terraform/.plugin-cache
 
@@ -28,7 +28,7 @@ jobs:
       AWS_DEFAULT_REGION: "us-west-2"
       TF_S3_BUCKET: "minio-terraform-state112024"
       TF_S3_KEY: "terraform.tfstate"
-      TF_WORKSPACE: k8s
+      TF_WORKSPACE_VAR: k8s
     steps:
       - name: Configure AWS credentials
         env:
@@ -74,10 +74,10 @@ jobs:
       - name: Determine K8S-Cluster Terraform Workspace
         working-directory: ./terraform/k8s-cluster
         run: |
-          if terraform workspace select ${{ env.TF_WORKSPACE }} 2>/dev/null; then
-            echo "Workspace ${{ env.TF_WORKSPACE }} Selected!"
+          if terraform workspace select ${{ env.TF_WORKSPACE_VAR }} 2>/dev/null; then
+            echo "Workspace ${{ env.TF_WORKSPACE_VAR }} Selected!"
           else
-            terraform workspace new ${{ env.TF_WORKSPACE }}
+            terraform workspace new ${{ env.TF_WORKSPACE_VAR }}
           fi
 
       - name: Apply New Terraform
@@ -163,7 +163,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_DEFAULT_REGION: "us-west-2"
-      TF_WORKSPACE: aistor
+      TF_WORKSPACE_VAR: aistor
       TF_S3_BUCKET: "minio-terraform-state112024"
       TF_S3_KEY: "terraform.tfstate"
     steps:
@@ -208,10 +208,10 @@ jobs:
       - name: Determine K8S-Cluster Terraform Workspace
         working-directory: ./terraform/aistor-config
         run: |
-          if terraform workspace select ${{ env.TF_WORKSPACE }} 2>/dev/null; then
-            echo "Workspace ${{ env.TF_WORKSPACE }} Selected!"
+          if terraform workspace select ${{ env.TF_WORKSPACE_VAR }} 2>/dev/null; then
+            echo "Workspace ${{ env.TF_WORKSPACE_VAR }} Selected!"
           else
-            terraform workspace new ${{ env.TF_WORKSPACE }}
+            terraform workspace new ${{ env.TF_WORKSPACE_VAR }}
           fi
 
       - name: Update /etc/hosts File With K8SCP Address Using AWS CLI
@@ -236,7 +236,7 @@ jobs:
       - name: Apply New Terraform
         working-directory: ./terraform/aistor-config
         run: terraform apply -var="aistor_pv_size=${{ env.disk_size }}" -var="hostnames=${{ env.host_array }}" -var="disk_count=${{ env.disk_count }}" -auto-approve
-        
+
   destroy:
     needs: set-condition
     if: needs.set-condition.outputs.run-job == 'true'
@@ -245,7 +245,7 @@ jobs:
       AWS_DEFAULT_REGION: "us-west-2"
       TF_S3_BUCKET: "minio-terraform-state112024"
       TF_S3_KEY: "terraform.tfstate"
-      TF_WORKSPACE: k8s
+      TF_WORKSPACE_VAR: k8s
     steps:
       - name: Configure AWS credentials
         env:
@@ -273,10 +273,10 @@ jobs:
       - name: Determine K8S-Cluster Terraform Workspace
         working-directory: ./terraform/k8s-cluster
         run: |
-          if terraform workspace select ${{ env.TF_WORKSPACE }} 2>/dev/null; then
-            echo "Workspace ${{ env.TF_WORKSPACE }} Selected!"
+          if terraform workspace select ${{ env.TF_WORKSPACE_VAR }} 2>/dev/null; then
+            echo "Workspace ${{ env.TF_WORKSPACE_VAR }} Selected!"
           else
-            terraform workspace new ${{ env.TF_WORKSPACE }}
+            terraform workspace new ${{ env.TF_WORKSPACE_VAR }}
           fi
 
       - name: Apply New Terraform
