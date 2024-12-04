@@ -241,7 +241,7 @@ jobs:
 
       - name: Apply New Terraform
         working-directory: ./terraform/aistor-config
-        run: terraform apply -var="aistor_pv_size=${{ env.disk_size }}" -var="hostnames=${{ env.hostnames }}" -var="disk_count=${{ env.disk_count }}" -auto-approve
+        run: terraform apply -var="aistor_pv_size=${{ env.disk_size }}" -var='hostnames=${{ env.hostnames }}' -var="disk_count=${{ env.disk_count }}" -auto-approve
         env:
           hostnames: '${{ env.hostnames }}'
 
