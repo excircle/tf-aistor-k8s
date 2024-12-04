@@ -82,7 +82,7 @@ jobs:
 
       - name: Apply New Terraform
         working-directory: ./terraform/k8s-cluster
-        run: terraform apply -auto-approve -var="generate_disk_info=true" -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
+        run: terraform apply -auto-approve -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
 
       - name: Upload disk-info.json File
         uses: actions/upload-artifact@v4
