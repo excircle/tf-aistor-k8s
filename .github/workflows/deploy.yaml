@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  destroy: true
+  destroy: false
 
 jobs:
   set-condition:
@@ -81,90 +81,96 @@ jobs:
 
       - name: Apply New Terraform
         working-directory: ./terraform/k8s-cluster
-        run: terraform apply -auto-approve -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
+        run: terraform apply -auto-approve -var="generate_disk_info=true" -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
 
-  ansible-build:
-      needs: [set-condition, aws-build]
-      if: needs.set-condition.outputs.run-job == 'false'
-      runs-on: ubuntu-latest
-      env:
-        AWS_DEFAULT_REGION: "us-west-2"
-        INI_FILE: "/home/runner/project.ini"
-        KEY_FILE: "/home/runner/sre-key"
-        NODES_FILE: "/home/runner/nodes.json"
-        ANSIBLE_USER: "ubuntu"
-        K8S_CONF_FILE: "/tmp/config"
-      steps:
-        - name: Configure AWS credentials
-          env:
-            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          run: |
-            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-            aws configure set region $AWS_DEFAULT_REGION
+      - name: Upload disk-info.json File
+        uses: actions/upload-artifact@v3
+        with:
+          name: disk-info.json
+          path: ./terraform/k8s-cluster/disk-info.json
+
+  # ansible-build:
+  #     needs: [set-condition, aws-build]
+  #     if: needs.set-condition.outputs.run-job == 'false'
+  #     runs-on: ubuntu-latest
+  #     env:
+  #       AWS_DEFAULT_REGION: "us-west-2"
+  #       INI_FILE: "/home/runner/project.ini"
+  #       KEY_FILE: "/home/runner/sre-key"
+  #       NODES_FILE: "/home/runner/nodes.json"
+  #       ANSIBLE_USER: "ubuntu"
+  #       K8S_CONF_FILE: "/tmp/config"
+  #     steps:
+  #       - name: Configure AWS credentials
+  #         env:
+  #           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         run: |
+  #           aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+  #           aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+  #           aws configure set region $AWS_DEFAULT_REGION
         
-        - name: Checkout code
-          uses: actions/checkout@v4
-          with:
-            ref: main #<- Define the branch you wish to use.
+  #       - name: Checkout code
+  #         uses: actions/checkout@v4
+  #         with:
+  #           ref: main #<- Define the branch you wish to use.
 
-        - name: Decode SSH key
-          run: |
-            base64 -d <<< '${{ secrets.PRIVATE_SSHKEY }}' > ${{ env.KEY_FILE }}
-            chmod 0600 ${{ env.KEY_FILE }}
+  #       - name: Decode SSH key
+  #         run: |
+  #           base64 -d <<< '${{ secrets.PRIVATE_SSHKEY }}' > ${{ env.KEY_FILE }}
+  #           chmod 0600 ${{ env.KEY_FILE }}
 
-        - name: Validate SSH Key
-          run: ssh-keygen -l -f ${{ env.KEY_FILE }}
+  #       - name: Validate SSH Key
+  #         run: ssh-keygen -l -f ${{ env.KEY_FILE }}
 
-        - name: Update project.ini File
-          working-directory: ./ansible
-          run: bash -x update-ini.sh ${{ env.ANSIBLE_USER }} ${{ env.KEY_FILE }} ${{ env.INI_FILE }} ${{ env.NODES_FILE }}
+  #       - name: Update project.ini File
+  #         working-directory: ./ansible
+  #         run: bash -x update-ini.sh ${{ env.ANSIBLE_USER }} ${{ env.KEY_FILE }} ${{ env.INI_FILE }} ${{ env.NODES_FILE }}
 
-        - name: Check project.ini File
-          run: cat ${{ env.INI_FILE }}
+  #       - name: Check project.ini File
+  #         run: cat ${{ env.INI_FILE }}
 
-        - name: Read Inventory File
-          id: read-inventory
-          run: |
-            echo "inventory_content<<EOF" >> $GITHUB_ENV
-            cat ${{ env.INI_FILE }} >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
+  #       - name: Read Inventory File
+  #         id: read-inventory
+  #         run: |
+  #           echo "inventory_content<<EOF" >> $GITHUB_ENV
+  #           cat ${{ env.INI_FILE }} >> $GITHUB_ENV
+  #           echo "EOF" >> $GITHUB_ENV
 
-        - name: Clone Ansible Role
-          working-directory: ./ansible
-          run: git clone https://github.com/excircle/ansible-cncf-k8s-role roles/ansible-cncf-k8s-role
+  #       - name: Clone Ansible Role
+  #         working-directory: ./ansible
+  #         run: git clone https://github.com/excircle/ansible-cncf-k8s-role roles/ansible-cncf-k8s-role
 
-        - name: Run Ansible Playbook
-          uses: dawidd6/action-ansible-playbook@v2
-          with:
-            playbook: k8s-bootstrap.yaml
-            directory: ./ansible
-            inventory: ${{ env.inventory_content }}
-            options: |
-              --extra-vars="local_kube_config=/tmp/config"
+  #       - name: Run Ansible Playbook
+  #         uses: dawidd6/action-ansible-playbook@v2
+  #         with:
+  #           playbook: k8s-bootstrap.yaml
+  #           directory: ./ansible
+  #           inventory: ${{ env.inventory_content }}
+  #           options: |
+  #             --extra-vars="local_kube_config=/tmp/config"
 
-        - name: Upload K8S Config File
-          uses: actions/upload-artifact@v3
-          with:
-            name: config
-            path: /tmp/config
+  #       - name: Upload K8S Config File
+  #         uses: actions/upload-artifact@v3
+  #         with:
+  #           name: config
+  #           path: /tmp/config
 
-  aistor-deploy:
-    needs: [set-condition, ansible-build]
-    if: needs.set-condition.outputs.run-job == 'false'
-    runs-on: ubuntu-latest
-    env:
-      AWS_DEFAULT_REGION: "us-west-2"
-    steps:
-      - name: Configure AWS credentials
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: |
-          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-          aws configure set region $AWS_DEFAULT_REGION
+  # aistor-deploy:
+  #   needs: [set-condition, ansible-build]
+  #   if: needs.set-condition.outputs.run-job == 'false'
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     AWS_DEFAULT_REGION: "us-west-2"
+  #   steps:
+  #     - name: Configure AWS credentials
+  #       env:
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #       run: |
+  #         aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+  #         aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+  #         aws configure set region $AWS_DEFAULT_REGION
 
   destroy:
     needs: set-condition
