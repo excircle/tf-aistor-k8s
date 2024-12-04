@@ -221,7 +221,8 @@ jobs:
 
       - name: Update /etc/hosts File With K8SCP Address Using AWS CLI
         run: |
-          aws ec2 describe-instances --region us-west-2 \ 
+          aws ec2 describe-instances \
+          --region us-west-2 \
           --filters "Name=tag:Name,Values=k8s-node-1" "Name=instance-state-name,Values=running" \
           --query "Reservations[*].Instances[*].{Name:Tags[?Key=='Name']|[0].Value, PublicIpAddress:PublicIpAddress}" \
           --output json | jq -r '[.[][]][].PublicIpAddress' | xargs -I {} echo "{} k8scp" | sudo tee -a /etc/hosts
