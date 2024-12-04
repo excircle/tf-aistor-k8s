@@ -166,6 +166,7 @@ jobs:
       TF_WORKSPACE_VAR: aistor
       TF_S3_BUCKET: "minio-terraform-state112024"
       TF_S3_KEY: "terraform.tfstate"
+      AISTOR_GIT_LOCATION: "https://github.com/minio/aistor.git"
     steps:
       - name: Configure AWS credentials
         env:
@@ -239,11 +240,14 @@ jobs:
         working-directory: ./terraform/aistor-config
         run: echo "disk_count=$(jq -r '.disks | length' disk-info.json)" >> $GITHUB_ENV
 
-      - name: Apply New Terraform
+      - name: Apply PV & PVC Terraform
         working-directory: ./terraform/aistor-config
         run: terraform apply -var="aistor_pv_size=${{ env.disk_size }}" -var='hostnames=${{ env.hostnames }}' -var="disk_count=${{ env.disk_count }}" -auto-approve
         env:
           hostnames: '${{ env.hostnames }}'
+
+      - name: Provision AiStor using Kustomize & kubectl
+        run: kubectl kustomize ${{ env.AISTOR_GIT_LOCATION }} | kubectl apply -f -
 
   destroy:
     needs: set-condition
