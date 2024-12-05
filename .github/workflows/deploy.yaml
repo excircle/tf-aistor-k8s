@@ -141,25 +141,25 @@ jobs:
               fi
             done
 
-          - name: Check all k8s-nodes are accessible via SSH on port 22
+        - name: Check that SSH is accessible on all nodes
           run: |
-           while true; do
-             INACCESSIBLE_NODES=0
-             for instance in $(aws ec2 describe-instances \
-               --filters "Name=tag:Name,Values=k8s-node*" "Name=instance-state-name,Values=running" \
-               --query "Reservations[*].Instances[*].PublicIpAddress" \
-               --output text); do
-               nc -z -w5 $instance 22 || INACCESSIBLE_NODES=$((INACCESSIBLE_NODES+1))
-             done
- 
-             if [ "$INACCESSIBLE_NODES" -eq 0 ]; then
-               echo "All k8s-nodes are accessible via SSH on port 22."
-               break
-             else
-               echo "$INACCESSIBLE_NODES nodes are not accessible. Retrying in 30 seconds..."
-               sleep 30
-             fi
-           done
+            while true; do
+              INACCESSIBLE_NODES=0
+              for instance in $(aws ec2 describe-instances \
+              --filters "Name=tag:Name,Values=k8s-node*" "Name=instance-state-name,Values=running" \
+              --query "Reservations[*].Instances[*].PublicIpAddress" \
+              --output text); do
+              nc -z -w5 $instance 22 || INACCESSIBLE_NODES=$((INACCESSIBLE_NODES+1))
+              done;
+
+              if [ "$INACCESSIBLE_NODES" -eq 0 ]; then
+                echo "All k8s-nodes are accessible via SSH on port 22."
+                break
+              else
+                echo "$INACCESSIBLE_NODES nodes are not accessible. Retrying in 30 seconds..."
+                sleep 5
+              fi
+            done;
 
         - name: Update project.ini File
           working-directory: ./ansible
