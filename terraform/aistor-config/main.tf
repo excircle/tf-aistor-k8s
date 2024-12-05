@@ -28,5 +28,6 @@ resource "kubernetes_manifest" "persistent_volume" {
     aistor_pv_size  = var.aistor_pv_size
     aistor_data_dir = format("/mnt/data%d", count.index+1)
     hostnames       = var.hostnames
+    storage_class_name             = var.storage_class_name
   }))
 }
