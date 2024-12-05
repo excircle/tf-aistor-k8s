@@ -136,8 +136,8 @@ jobs:
                 echo "All k8s-node instances are in Running state."
                 break
               else
-                echo "$NOT_RUNNING_COUNT instances are not in Running state. Retrying in 30 seconds..."
-                sleep 30
+                echo "$NOT_RUNNING_COUNT instances are not in Running state. Retrying in 5 seconds..."
+                sleep 5
               fi
             done
 
@@ -156,10 +156,32 @@ jobs:
                 echo "All k8s-nodes are accessible via SSH on port 22."
                 break
               else
-                echo "$INACCESSIBLE_NODES nodes are not accessible. Retrying in 30 seconds..."
+                echo "$INACCESSIBLE_NODES nodes are not accessible. Retrying in 5 seconds..."
                 sleep 5
               fi
             done;
+
+        - name: Ensure EC2 Nodes Have Initialized
+          run: |
+            while true; do
+              STATUS_CHECK_COUNT=$(aws ec2 describe-instance-status \
+                --filters "Name=instance-status.status,Values=ok" "Name=system-status.status,Values=ok" \
+                --query "InstanceStatuses[?InstanceId != null && contains(Tags[?Key=='Name'].Value[], 'k8s-node*')].InstanceId" \
+                --output text | wc -l)
+                
+              TOTAL_INSTANCES=$(aws ec2 describe-instances \
+                --filters "Name=tag:Name,Values=k8s-node*" "Name=instance-state-name,Values=running" \
+                --query "Reservations[*].Instances[*].InstanceId" \
+                --output text | wc -l)
+                
+              if [ "$STATUS_CHECK_COUNT" -eq "$TOTAL_INSTANCES" ]; then
+                echo "All k8s-node instances have passed status checks."
+                break
+              else
+                echo "$((TOTAL_INSTANCES - STATUS_CHECK_COUNT)) instances have not passed status checks yet. Retrying in 5 seconds..."
+                sleep 5
+              fi
+            done    
 
         - name: Update project.ini File
           working-directory: ./ansible
@@ -286,6 +308,10 @@ jobs:
       - name: Provision AiStor using Kustomize & kubectl
         working-directory: ./terraform/aistor-config
         run: kubectl --kubeconfig="./config" kustomize ${{ env.AISTOR_GIT_LOCATION }} | kubectl --kubeconfig="./config" apply -f -
+
+      - name: Expose AiStor Instance
+        working-directory: ./terraform/aistor-config
+        run: kubectl -n aistor --kubeconfig="./config" label pod aistor-0 app=aistor && kubectl -n aistor --kubeconfig="./config" expose pod aistor-0 --type=NodePort --name=aistor-service --port=8444 --target-port=8444
 
   destroy:
     needs: set-condition
