@@ -33,7 +33,7 @@ module "k8s-node" {
 }
 
 module "minio-disks" {
-  source = "./modules/tf-aws-minio-disks"
+  source = "github.com/excircle/tf-aws-minio-disks"
 
   minio_hosts = module.k8s-node.minio_host_info
   disk_names = module.k8s-node.disk-names
