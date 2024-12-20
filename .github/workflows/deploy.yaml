@@ -147,13 +147,7 @@ jobs:
                 sleep 5
               fi
             done;
-
-        - name: Ensure EC2 nodes have passed all status checks
-          run: |
-            until
-              ALL_PASSED=true
               
-
         - name: Update project.ini File
           working-directory: ./ansible
           run: bash -x update-ini.sh ${{ env.ANSIBLE_USER }} ${{ env.KEY_FILE }} ${{ env.INI_FILE }} ${{ env.NODES_FILE }}
