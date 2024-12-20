@@ -80,9 +80,13 @@ jobs:
             terraform workspace new ${{ env.TF_WORKSPACE_VAR }}
           fi
 
-      - name: Apply New Terraform
+      - name: Apply K8s VPC & Nodes
         working-directory: ./terraform/k8s-cluster
-        run: terraform apply -auto-approve -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
+        run: terraform apply -target=module.k8s-vpc -target=module.k8s-node -auto-approve -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
+
+      - name: Apply K8s Disks
+        working-directory: ./terraform/k8s-cluster
+        run: terraform apply -target=module.minio-disks -auto-approve -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
 
       - name: Upload disk-info.json File
         uses: actions/upload-artifact@v4
@@ -124,23 +128,6 @@ jobs:
         - name: Validate SSH Key
           run: ssh-keygen -l -f ${{ env.KEY_FILE }}
 
-        - name: Wait for all EC2 nodes to be in "Running" state
-          run: |
-            while true; do
-              NOT_RUNNING_COUNT=$(aws ec2 describe-instances \
-                --filters "Name=tag:Name,Values=k8s-node*" "Name=instance-state-name,Values=pending,stopping,stopped" \
-                --query "Reservations[*].Instances[*].State.Name" \
-                --output text | wc -l)
-              
-              if [ "$NOT_RUNNING_COUNT" -eq 0 ]; then
-                echo "All k8s-node instances are in Running state."
-                break
-              else
-                echo "$NOT_RUNNING_COUNT instances are not in Running state. Retrying in 5 seconds..."
-                sleep 5
-              fi
-            done
-
         - name: Check that SSH is accessible on all nodes
           run: |
             while true; do
@@ -161,27 +148,11 @@ jobs:
               fi
             done;
 
-        - name: Ensure EC2 Nodes Have Initialized
+        - name: Ensure EC2 nodes have passed all status checks
           run: |
-            while true; do
-              STATUS_CHECK_COUNT=$(aws ec2 describe-instance-status \
-                --filters "Name=instance-status.status,Values=ok" "Name=system-status.status,Values=ok" \
-                --query "InstanceStatuses[?InstanceId != null && contains(Tags[?Key=='Name'].Value[], 'k8s-node*')].InstanceId" \
-                --output text | wc -l)
-                
-              TOTAL_INSTANCES=$(aws ec2 describe-instances \
-                --filters "Name=tag:Name,Values=k8s-node*" "Name=instance-state-name,Values=running" \
-                --query "Reservations[*].Instances[*].InstanceId" \
-                --output text | wc -l)
-                
-              if [ "$STATUS_CHECK_COUNT" -eq "$TOTAL_INSTANCES" ]; then
-                echo "All k8s-node instances have passed status checks."
-                break
-              else
-                echo "$((TOTAL_INSTANCES - STATUS_CHECK_COUNT)) instances have not passed status checks yet. Retrying in 5 seconds..."
-                sleep 5
-              fi
-            done    
+            until
+              ALL_PASSED=true
+              
 
         - name: Update project.ini File
           working-directory: ./ansible
