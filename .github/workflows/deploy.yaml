@@ -320,6 +320,10 @@ jobs:
             terraform workspace new ${{ env.TF_WORKSPACE_VAR }}
           fi
 
-      - name: Apply New Terraform
+      - name: Destroy Nodes
         working-directory: ./terraform/k8s-cluster
-        run: terraform destroy -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)" -auto-approve -lock=false
+        run: terraform destroy -target=module.k8s-node -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)" -auto-approve -lock=false
+
+      - name: Destroy VPC + Disks
+        working-directory: ./terraform/k8s-cluster
+        run: terraform destroy -target=module.k8s-vpc -target=module.minio-disks  -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)" -auto-approve -lock=false
