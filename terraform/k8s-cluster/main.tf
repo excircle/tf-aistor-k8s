@@ -15,7 +15,7 @@ module "k8s-node" {
 
   application_name          = "k8s-node"
   system_user               = "ubuntu"
-  hosts                     = 5                              # Number of nodes with MinIO installed
+  hosts                     = 3                              # Number of nodes with MinIO installed
   vpc_id                    = module.k8s-vpc.vpc_id
   ebs_root_volume_size      = 10
   ebs_storage_volume_size   = 50
