@@ -1,13 +1,13 @@
 # 1.) Create Namespace
-resource "kubernetes_namespace" "aistor_staging" {
-  metadata {
-    labels = {
-      mylabel = "aistor-staging"
-    }
+# resource "kubernetes_namespace" "aistor_staging" {
+#   metadata {
+#     labels = {
+#       mylabel = "aistor-staging"
+#     }
 
-    name = "aistor-staging"
-  }
-}
+#     name = "aistor-staging"
+#   }
+# }
 
 # # 2.) Create Default Storage Class
 # resource "kubernetes_manifest" "default_storage_class" {
