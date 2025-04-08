@@ -20,169 +20,169 @@ jobs:
         id: set-output
         run: |
           echo "RUN_JOB=${{ env.destroy }}" >> $GITHUB_OUTPUT
-  aws-build:
-    needs: set-condition
-    if: needs.set-condition.outputs.run-job == 'false'
-    runs-on: ubuntu-latest
-    env:
-      AWS_DEFAULT_REGION: "us-west-2"
-      TF_S3_BUCKET: "minio-terraform-state112024"
-      TF_S3_KEY: "terraform.tfstate"
-      TF_WORKSPACE_VAR: k8s
-    steps:
-      - name: Configure AWS credentials
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: |
-          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-          aws configure set region $AWS_DEFAULT_REGION
+  # aws-build:
+  #   needs: set-condition
+  #   if: needs.set-condition.outputs.run-job == 'false'
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     AWS_DEFAULT_REGION: "us-west-2"
+  #     TF_S3_BUCKET: "minio-terraform-state112024"
+  #     TF_S3_KEY: "terraform.tfstate"
+  #     TF_WORKSPACE_VAR: k8s
+  #   steps:
+  #     - name: Configure AWS credentials
+  #       env:
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #       run: |
+  #         aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+  #         aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+  #         aws configure set region $AWS_DEFAULT_REGION
 
-      - name: Check if S3 Bucket Exists
-        id: check-bucket
-        run: |
-          if aws s3api head-bucket --bucket $TF_S3_BUCKET 2>/dev/null; then
-            echo "bucket_exists=true" >> $GITHUB_ENV
-          else
-            echo "bucket_exists=false" >> $GITHUB_ENV
-          fi
+  #     - name: Check if S3 Bucket Exists
+  #       id: check-bucket
+  #       run: |
+  #         if aws s3api head-bucket --bucket $TF_S3_BUCKET 2>/dev/null; then
+  #           echo "bucket_exists=true" >> $GITHUB_ENV
+  #         else
+  #           echo "bucket_exists=false" >> $GITHUB_ENV
+  #         fi
     
-      - name: Create AWS S3 bucket
-        if: env.bucket_exists == 'false'
-        run: |
-          aws s3api create-bucket --bucket $TF_S3_BUCKET --region $AWS_DEFAULT_REGION --create-bucket-configuration LocationConstraint=$AWS_DEFAULT_REGION
-          aws s3api put-object --bucket $TF_S3_BUCKET --key $TF_S3_KEY
+  #     - name: Create AWS S3 bucket
+  #       if: env.bucket_exists == 'false'
+  #       run: |
+  #         aws s3api create-bucket --bucket $TF_S3_BUCKET --region $AWS_DEFAULT_REGION --create-bucket-configuration LocationConstraint=$AWS_DEFAULT_REGION
+  #         aws s3api put-object --bucket $TF_S3_BUCKET --key $TF_S3_KEY
 
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: main #<- Define the branch you wish to use!
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: main #<- Define the branch you wish to use!
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.7
+  #     - name: Set up Terraform
+  #       uses: hashicorp/setup-terraform@v2
+  #       with:
+  #         terraform_version: 1.5.7
 
-      - name: Create Plugin Cache Dir
-        run: mkdir ${{ env.TF_PLUGIN_CACHE_DIR }}
+  #     - name: Create Plugin Cache Dir
+  #       run: mkdir ${{ env.TF_PLUGIN_CACHE_DIR }}
 
-      - name: Initialize K8S-Cluster Terraform
-        working-directory: ./terraform/k8s-cluster
-        run: export TF_PLUGIN_CACHE_DIR=${{ env.TF_PLUGIN_CACHE_DIR }}; terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"
+  #     - name: Initialize K8S-Cluster Terraform
+  #       working-directory: ./terraform/k8s-cluster
+  #       run: export TF_PLUGIN_CACHE_DIR=${{ env.TF_PLUGIN_CACHE_DIR }}; terraform init -backend-config="bucket=${TF_S3_BUCKET}" -backend-config="key=${TF_S3_KEY}" -backend-config="region=${AWS_DEFAULT_REGION}"
 
-      - name: Determine K8S-Cluster Terraform Workspace
-        working-directory: ./terraform/k8s-cluster
-        run: |
-          if terraform workspace select ${{ env.TF_WORKSPACE_VAR }} 2>/dev/null; then
-            echo "Workspace ${{ env.TF_WORKSPACE_VAR }} Selected!"
-          else
-            terraform workspace new ${{ env.TF_WORKSPACE_VAR }}
-          fi
+  #     - name: Determine K8S-Cluster Terraform Workspace
+  #       working-directory: ./terraform/k8s-cluster
+  #       run: |
+  #         if terraform workspace select ${{ env.TF_WORKSPACE_VAR }} 2>/dev/null; then
+  #           echo "Workspace ${{ env.TF_WORKSPACE_VAR }} Selected!"
+  #         else
+  #           terraform workspace new ${{ env.TF_WORKSPACE_VAR }}
+  #         fi
 
-      - name: Apply K8s VPC & Nodes
-        working-directory: ./terraform/k8s-cluster
-        run: terraform apply -target=module.k8s-vpc -target=module.k8s-node -auto-approve -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
+  #     - name: Apply K8s VPC & Nodes
+  #       working-directory: ./terraform/k8s-cluster
+  #       run: terraform apply -target=module.k8s-vpc -target=module.k8s-node -auto-approve -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
 
-      - name: Apply K8s Disks
-        working-directory: ./terraform/k8s-cluster
-        run: terraform apply -target=module.minio-disks -auto-approve -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
+  #     - name: Apply K8s Disks
+  #       working-directory: ./terraform/k8s-cluster
+  #       run: terraform apply -target=module.minio-disks -auto-approve -var="sshkey=$(echo "${{ secrets.SSHKEY }}" | base64 --decode)"
 
-      - name: Upload disk-info.json File
-        uses: actions/upload-artifact@v4
-        with:
-          name: disk-info.json
-          path: ./terraform/k8s-cluster/disk-info.json
+  #     - name: Upload disk-info.json File
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: disk-info.json
+  #         path: ./terraform/k8s-cluster/disk-info.json
 
-  ansible-build:
-      needs: [set-condition, aws-build]
-      if: needs.set-condition.outputs.run-job == 'false'
-      runs-on: ubuntu-latest
-      env:
-        AWS_DEFAULT_REGION: "us-west-2"
-        INI_FILE: "/home/runner/project.ini"
-        KEY_FILE: "/home/runner/sre-key"
-        NODES_FILE: "/home/runner/nodes.json"
-        ANSIBLE_USER: "ubuntu"
-        K8S_CONF_FILE: "/tmp/config"
-      steps:
-        - name: Configure AWS credentials
-          env:
-            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          run: |
-            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-            aws configure set region $AWS_DEFAULT_REGION
+  # ansible-build:
+  #     needs: [set-condition, aws-build]
+  #     if: needs.set-condition.outputs.run-job == 'false'
+  #     runs-on: ubuntu-latest
+  #     env:
+  #       AWS_DEFAULT_REGION: "us-west-2"
+  #       INI_FILE: "/home/runner/project.ini"
+  #       KEY_FILE: "/home/runner/sre-key"
+  #       NODES_FILE: "/home/runner/nodes.json"
+  #       ANSIBLE_USER: "ubuntu"
+  #       K8S_CONF_FILE: "/tmp/config"
+  #     steps:
+  #       - name: Configure AWS credentials
+  #         env:
+  #           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         run: |
+  #           aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+  #           aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+  #           aws configure set region $AWS_DEFAULT_REGION
         
-        - name: Checkout code
-          uses: actions/checkout@v4
-          with:
-            ref: main #<- Define the branch you wish to use.
+  #       - name: Checkout code
+  #         uses: actions/checkout@v4
+  #         with:
+  #           ref: main #<- Define the branch you wish to use.
 
-        - name: Decode SSH key
-          run: |
-            base64 -d <<< '${{ secrets.PRIVATE_SSHKEY }}' > ${{ env.KEY_FILE }}
-            chmod 0600 ${{ env.KEY_FILE }}
+  #       - name: Decode SSH key
+  #         run: |
+  #           base64 -d <<< '${{ secrets.PRIVATE_SSHKEY }}' > ${{ env.KEY_FILE }}
+  #           chmod 0600 ${{ env.KEY_FILE }}
 
-        - name: Validate SSH Key
-          run: ssh-keygen -l -f ${{ env.KEY_FILE }}
+  #       - name: Validate SSH Key
+  #         run: ssh-keygen -l -f ${{ env.KEY_FILE }}
 
-        - name: Check that SSH is accessible on all nodes
-          run: |
-            while true; do
-              INACCESSIBLE_NODES=0
-              for instance in $(aws ec2 describe-instances \
-              --filters "Name=tag:Name,Values=k8s-node*" "Name=instance-state-name,Values=running" \
-              --query "Reservations[*].Instances[*].PublicIpAddress" \
-              --output text); do
-              nc -z -w5 $instance 22 || INACCESSIBLE_NODES=$((INACCESSIBLE_NODES+1))
-              done;
+  #       - name: Check that SSH is accessible on all nodes
+  #         run: |
+  #           while true; do
+  #             INACCESSIBLE_NODES=0
+  #             for instance in $(aws ec2 describe-instances \
+  #             --filters "Name=tag:Name,Values=k8s-node*" "Name=instance-state-name,Values=running" \
+  #             --query "Reservations[*].Instances[*].PublicIpAddress" \
+  #             --output text); do
+  #             nc -z -w5 $instance 22 || INACCESSIBLE_NODES=$((INACCESSIBLE_NODES+1))
+  #             done;
 
-              if [ "$INACCESSIBLE_NODES" -eq 0 ]; then
-                echo "All k8s-nodes are accessible via SSH on port 22."
-                break
-              else
-                echo "$INACCESSIBLE_NODES nodes are not accessible. Retrying in 5 seconds..."
-                sleep 5
-              fi
-            done;
+  #             if [ "$INACCESSIBLE_NODES" -eq 0 ]; then
+  #               echo "All k8s-nodes are accessible via SSH on port 22."
+  #               break
+  #             else
+  #               echo "$INACCESSIBLE_NODES nodes are not accessible. Retrying in 5 seconds..."
+  #               sleep 5
+  #             fi
+  #           done;
               
-        - name: Update project.ini File
-          working-directory: ./ansible
-          run: bash -x update-ini.sh ${{ env.ANSIBLE_USER }} ${{ env.KEY_FILE }} ${{ env.INI_FILE }} ${{ env.NODES_FILE }}
+  #       - name: Update project.ini File
+  #         working-directory: ./ansible
+  #         run: bash -x update-ini.sh ${{ env.ANSIBLE_USER }} ${{ env.KEY_FILE }} ${{ env.INI_FILE }} ${{ env.NODES_FILE }}
 
-        - name: Check project.ini File
-          run: cat ${{ env.INI_FILE }}
+  #       - name: Check project.ini File
+  #         run: cat ${{ env.INI_FILE }}
 
-        - name: Read Inventory File
-          id: read-inventory
-          run: |
-            echo "inventory_content<<EOF" >> $GITHUB_ENV
-            cat ${{ env.INI_FILE }} >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
+  #       - name: Read Inventory File
+  #         id: read-inventory
+  #         run: |
+  #           echo "inventory_content<<EOF" >> $GITHUB_ENV
+  #           cat ${{ env.INI_FILE }} >> $GITHUB_ENV
+  #           echo "EOF" >> $GITHUB_ENV
 
-        - name: Clone Ansible Role
-          working-directory: ./ansible
-          run: git clone https://github.com/excircle/ansible-cncf-k8s-role roles/ansible-cncf-k8s-role
+  #       - name: Clone Ansible Role
+  #         working-directory: ./ansible
+  #         run: git clone https://github.com/excircle/ansible-cncf-k8s-role roles/ansible-cncf-k8s-role
 
-        - name: Run Ansible Playbook
-          uses: dawidd6/action-ansible-playbook@v2
-          with:
-            playbook: k8s-bootstrap.yaml
-            directory: ./ansible
-            inventory: ${{ env.inventory_content }}
-            options: |
-              --extra-vars="local_kube_config=/tmp/config"
+  #       - name: Run Ansible Playbook
+  #         uses: dawidd6/action-ansible-playbook@v2
+  #         with:
+  #           playbook: k8s-bootstrap.yaml
+  #           directory: ./ansible
+  #           inventory: ${{ env.inventory_content }}
+  #           options: |
+  #             --extra-vars="local_kube_config=/tmp/config"
 
-        - name: Upload K8S Config File
-          uses: actions/upload-artifact@v4
-          with:
-            name: config
-            path: /tmp/config
+  #       - name: Upload K8S Config File
+  #         uses: actions/upload-artifact@v4
+  #         with:
+  #           name: config
+  #           path: /tmp/config
 
   aistor-deploy:
-    needs: [set-condition, ansible-build]
+    needs: [set-condition]
     if: needs.set-condition.outputs.run-job == 'false'
     runs-on: ubuntu-latest
     env:
