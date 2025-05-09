@@ -188,6 +188,7 @@ jobs:
     env:
       AWS_DEFAULT_REGION: "us-west-2"
       TF_WORKSPACE_VAR: aistor
+      AISTOR_NS: aistor
       TF_S3_BUCKET: "minio-terraform-state112024"
       TF_S3_KEY: "terraform.tfstate"
       AISTOR_GIT_LOCATION: "https://github.com/minio/aistor.git"
@@ -269,6 +270,10 @@ jobs:
         run: terraform apply -var="aistor_pv_size=${{ env.disk_size }}" -var='hostnames=${{ env.hostnames }}' -var="disk_count=${{ env.disk_count }}" -auto-approve
         env:
           hostnames: '${{ env.hostnames }}'
+
+      - name: Create aistor Kubernetes Namespace
+        working-directory: ./terraform/aistor-config
+        run: kubectl --kubeconfig="./config" create ${{ env.AISTOR_NS }}
 
       - name: Provision AiStor using Kustomize & kubectl
         working-directory: ./terraform/aistor-config

@@ -24,7 +24,7 @@ module "k8s-node" {
   ec2_ami_image             = "ami-07a7eda24f3bc8430"        # ami-07a7eda24f3bc8430 | us-west-2 AMI | Ubuntu 22.04.4 LTS (Jammy Jellyfish) Packer Image
   az_count                  = 2                              # Number of AZs to use
   subnets                   = module.k8s-vpc.subnets
-  num_disks                 = 8                              # Creates a number of disks
+  num_disks                 = 12                              # Creates a number of disks
   sshkey                    = var.sshkey                     # Use env variables | export TF_VAR_sshkey=$(cat ~/.ssh/your-key-name.pub)
   ec2_key_name              = "quick-key"
   package_manager           = "apt"
