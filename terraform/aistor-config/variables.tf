@@ -19,7 +19,7 @@ variable "sto_class_volume_binding_mode" {
 variable "sto_class_reclaim_policy" {
   description = "Reclaim policy"
   type        = string
-  default     = "Retain"
+  default     = "Delete"
 }
 
 variable "aistor_pv_name" {

@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  destroy: false
+  destroy: true
   branch: main
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/terraform/.plugin-cache
 
