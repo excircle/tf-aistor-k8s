@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  destroy: true
+  destroy: false
   branch: main
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/terraform/.plugin-cache
 
@@ -273,7 +273,7 @@ jobs:
 
       - name: Create aistor Kubernetes Namespace
         working-directory: ./terraform/aistor-config
-        run: kubectl --kubeconfig="./config" create ${{ env.AISTOR_NS }}
+        run: kubectl --kubeconfig="./config" create ns ${{ env.AISTOR_NS }}
 
       - name: Provision AiStor using Kustomize & kubectl
         working-directory: ./terraform/aistor-config
