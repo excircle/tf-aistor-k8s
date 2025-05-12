@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  destroy: true
+  destroy: false
   branch: main
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/terraform/.plugin-cache
 
@@ -270,18 +270,6 @@ jobs:
         run: terraform apply -var="aistor_pv_size=${{ env.disk_size }}" -var='hostnames=${{ env.hostnames }}' -var="disk_count=${{ env.disk_count }}" -auto-approve
         env:
           hostnames: '${{ env.hostnames }}'
-
-      - name: Create aistor Kubernetes Namespace
-        working-directory: ./terraform/aistor-config
-        run: kubectl --kubeconfig="./config" create ns ${{ env.AISTOR_NS }}
-
-      - name: Provision AiStor using Kustomize & kubectl
-        working-directory: ./terraform/aistor-config
-        run: kubectl --kubeconfig="./config" kustomize ${{ env.AISTOR_GIT_LOCATION }} | kubectl --kubeconfig="./config" apply -f -
-
-      - name: Expose AiStor Instance
-        working-directory: ./terraform/aistor-config
-        run: kubectl -n aistor --kubeconfig="./config" label pod aistor-0 app=aistor && kubectl -n aistor --kubeconfig="./config" expose pod aistor-0 --type=NodePort --name=aistor-service --port=8444 --target-port=8444
 
   destroy:
     needs: set-condition
