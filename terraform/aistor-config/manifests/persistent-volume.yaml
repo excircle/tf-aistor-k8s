@@ -20,6 +20,5 @@ spec:
         - key: kubernetes.io/hostname
           operator: In
           values:
-          %{ for hostname in hostnames ~}
             - "${hostname}"
-          %{ endfor ~}
+
