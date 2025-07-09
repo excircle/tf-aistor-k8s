@@ -10,7 +10,7 @@ resource "kubernetes_manifest" "default_storage_class" {
 
 # 2.) Create Persistent Volume
 resource "kubernetes_manifest" "persistent_volume" {
-  for_each = local.pvs
+  for_each = toset(local.pvs)
 
   manifest = yamldecode(templatefile("${path.module}/manifests/persistent-volume.yaml", {
     aistor_pv_name                 = format("%s", "${each.key}")
